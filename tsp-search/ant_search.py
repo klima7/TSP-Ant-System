@@ -9,10 +9,9 @@ def ant_search(graph, start, n_ants=50, q=100, rho=0.99, alpha=1, beta=5):
 
     ants = _init_ants(cities_count, n_ants)
     phs = _init_pheromones(graph)
-    visibility = _create_visibility_matrix(graph)
 
     for i in range(cities_count):
-        _turn(ants, phs, graph, visibility, q, rho, alpha, beta)
+        _turn(ants, phs, graph, q, rho, alpha, beta)
 
     best_ant = _find_best_ant(ants, start)
     return best_ant.path, best_ant.cost, None
@@ -54,21 +53,15 @@ def _init_pheromones(graph):
     return phs
 
 
-def _create_visibility_matrix(graph):
-    visibility_mat = graph.max() + 1 - graph
-    visibility_mat[visibility_mat == np.PINF] = np.NINF
-    return visibility_mat
+def _turn(ants, phs, graph, q, rho, alpha, beta):
+    _update_ants(ants, phs, graph, alpha, beta)
+    _update_pheromones(ants, phs, q, rho)
 
 
-def _turn(ants, phs, graph, visibility, q, rho, alpha, beta):
-    _update_ants(ants, phs, graph, visibility, alpha, beta)
-    _update_pheromones(ants, phs, graph, q, rho)
-
-
-def _update_ants(ants, phs, graph, visibility, alpha, beta):
+def _update_ants(ants, phs, graph, alpha, beta):
     ants_to_kill = []
     for ant in ants:
-        live = _update_ant(ant, graph, visibility, phs, alpha, beta)
+        live = _update_ant(ant, graph, phs, alpha, beta)
         if not live:
             ants_to_kill.append(ant)
 
@@ -76,8 +69,8 @@ def _update_ants(ants, phs, graph, visibility, alpha, beta):
         ants.remove(ant)
 
 
-def _update_ant(ant, graph, visibility, phs, alpha, beta):
-    next_paths, probabilities = _get_next_paths_and_probabilities(ant.path, graph, visibility, phs, alpha, beta)
+def _update_ant(ant, graph, phs, alpha, beta):
+    next_paths, probabilities = _get_next_paths_and_probabilities(ant.path, graph, phs, alpha, beta)
     if len(next_paths) == 0:
         return False
     selected_path = random.choices(next_paths, weights=probabilities, k=1)[0]
@@ -85,27 +78,28 @@ def _update_ant(ant, graph, visibility, phs, alpha, beta):
     return True
 
 
-def _get_next_paths_and_probabilities(path, graph, visibility, phs, alpha, beta):
+def _get_next_paths_and_probabilities(path, graph, phs, alpha, beta):
     next_paths = _get_next_paths(path, graph)
-    numerators = [_get_probability_numerator(path, visibility, phs, alpha, beta) for path in next_paths]
+    numerators = [_get_probability_numerator(path, graph, phs, alpha, beta) for path in next_paths]
     denominator = sum(numerators) if numerators else 0
     probabilities = [num / denominator for num in numerators] if denominator != 0 else []
     return next_paths, probabilities
 
 
-def _get_probability_numerator(path, visibility, phs, alpha, beta):
+def _get_probability_numerator(path, graph, phs, alpha, beta):
     if len(path) == 2:
         return 1
     current_city, next_city = path[-2:]
-    numerator = phs[current_city, next_city]**alpha * visibility[current_city, next_city]**beta
+    visibility = 1 / graph[current_city, next_city]
+    numerator = phs[current_city, next_city]**alpha * visibility**beta
     return numerator
 
 
-def _update_pheromones(ants, phs, graph, q, rho):
+def _update_pheromones(ants, phs, q, rho):
     np.multiply(phs, rho, out=phs)
     for ant in ants:
         prev_city, next_city = ant.path[-2:]
-        delta_phs = q / graph[prev_city, next_city]
+        delta_phs = q / ant.cost
         phs[prev_city, next_city] += delta_phs
 
 
