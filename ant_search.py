@@ -1,7 +1,6 @@
 import numpy as np
 import random
 from functools import total_ordering
-from search import _get_next_paths
 
 
 def ant_search(graph, start, n_ants=50, q=100, rho=0.99, alpha=1, beta=5):
@@ -107,3 +106,40 @@ def _find_best_ant(ants, start):
     start_ants = [ant for ant in ants if ant.start == start]
     best_ants = sorted(start_ants)
     return best_ants[0]
+
+
+def _get_next_paths(current_path, graph):
+    cities_count = graph.shape[1]
+    current_path_length = len(current_path)
+
+    if current_path_length == cities_count:
+        return _get_next_paths_final_step(current_path, graph)
+    else:
+        return _get_next_paths_standard_step(current_path, graph)
+
+
+def _get_next_paths_standard_step(current_path, graph):
+    next_paths = []
+    cities_count = graph.shape[1]
+    current_city = current_path[-1]
+
+    for next_city in range(cities_count):
+        weight = graph[current_city][next_city]
+        if next_city in current_path or weight == np.NINF:
+            continue
+        next_path = current_path + [next_city]
+        next_paths.append(next_path)
+    return next_paths
+
+
+def _get_next_paths_final_step(current_path, graph):
+    first_city = current_path[0]
+    current_city = current_path[-1]
+
+    cost = graph[current_city][first_city]
+
+    if cost == np.NINF:
+        return []
+
+    new_path = current_path + [first_city]
+    return [new_path]
