@@ -81,7 +81,10 @@ def _get_next_paths_and_probabilities(path, graph, phs, alpha, beta):
     next_paths = _get_next_paths(path, graph)
     numerators = [_get_probability_numerator(path, graph, phs, alpha, beta) for path in next_paths]
     denominator = sum(numerators) if numerators else 0
-    probabilities = [num / denominator for num in numerators] if denominator != 0 else []
+    if denominator == 0:
+        probabilities = np.ones((len(numerators,))) / len(numerators)
+    else:
+        probabilities = [num / denominator for num in numerators]
     return next_paths, probabilities
 
 
